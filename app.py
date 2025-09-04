@@ -17,8 +17,8 @@ def find_deviations(df_input, df_output):
     # Ensure column alignment
     common_headers = [h for h in df_input.columns if h in df_output.columns]
 
-    if "Vendor SKU Code" not in df_input.columns:
-        st.error("❌ 'Vendor SKU Code' column not found in Input sheet.")
+    if "Style ID" not in df_input.columns:
+        st.error("❌ 'Style ID' column not found in Input sheet.")
         return None
 
     for idx, row in df_input.iterrows():
@@ -28,7 +28,7 @@ def find_deviations(df_input, df_output):
 
         row_diff = {
             "Row Number": idx + 2,  # +2 = Excel row index (header + 1-based)
-            "sku": normalize_value(row.get("Vendor SKU Code", "")),
+            "sku": normalize_value(row.get("Style ID", "")),
             "Deviation Count": 0,
             "Missing Filled Count": 0,
             "Modified Count": 0
