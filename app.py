@@ -1,8 +1,12 @@
-import streamlit as st
 import pandas as pd
+import streamlit as st
 from io import BytesIO
 
-st.set_page_config(page_title="Excel Deviation Checker", layout="wide")
+def normalize_value(val):
+    """Convert NaN/None to empty string and strip spaces."""
+    if pd.isna(val):
+        return ""
+    return str(val).strip()
 
 def find_deviations(df_input, df_output):
     deviations = []
@@ -20,8 +24,8 @@ def find_deviations(df_input, df_output):
             continue
 
         row_diff = {
-            "Row Number": idx + 2,  # +2 to match Excel row numbers (header + index offset)
-            "sku": row["Vendor SKU Code"],
+            "Row Number": idx + 2,  # Excel-style row number
+            "sku": row.get("Vendor SKU Code", ""),
             "Deviation Count": 0,
             "Missing Filled Count": 0,
             "Modified Count": 0
@@ -29,8 +33,8 @@ def find_deviations(df_input, df_output):
 
         diffs = {}
         for col in common_headers:
-            val_in = str(row[col]).strip()
-            val_out = str(row_output[col]).strip()
+            val_in = normalize_value(row[col])
+            val_out = normalize_value(row_output[col])
 
             if val_in != val_out:
                 diffs[col] = f"Old: {val_in} → New: {val_out}"
@@ -45,36 +49,3 @@ def find_deviations(df_input, df_output):
             deviations.append(row_diff)
 
     return pd.DataFrame(deviations)
-
-
-st.title("📊 Excel Deviation Checker")
-st.write("Upload Input and Output Excel files to compare deviations.")
-
-# Upload files
-file_input = st.file_uploader("Upload Input Excel", type=["xlsx"])
-file_output = st.file_uploader("Upload Output Excel", type=["xlsx"])
-
-if file_input and file_output:
-    # Read Excel sheets
-    df_input = pd.read_excel(file_input, sheet_name="Input")
-    df_output = pd.read_excel(file_output, sheet_name="Output")
-
-    deviations_df = find_deviations(df_input, df_output)
-
-    if deviations_df is not None and not deviations_df.empty:
-        st.success(f"✅ Found {deviations_df['Deviation Count'].sum()} deviations.")
-        st.dataframe(deviations_df, use_container_width=True)
-
-        # Download deviations as Excel
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine="openpyxl") as writer:
-            deviations_df.to_excel(writer, index=False, sheet_name="Deviations")
-
-        st.download_button(
-            label="📥 Download Deviations Report",
-            data=output.getvalue(),
-            file_name="deviations.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-    else:
-        st.info("No deviations found ✅")
